@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import React, { useState, useEffect } from 'react';
 import { Searchbar } from './Searchbar/Searchbar';
 import { fetchImages } from './api/fetchImages';
@@ -9,7 +8,6 @@ import { Modal } from './Modal/Modal';
 import cssApp from './App.module.css'
 import cssLoader from './Loader/Loader.module.css';
 
-let isLoading = false;
 export const App = () => {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
