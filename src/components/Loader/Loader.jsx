@@ -1,27 +1,19 @@
-import React from "react";
-import PuffLoader from "react-spinners/PuffLoader";
+import { Watch } from 'react-loader-spinner';
+import { LoaderPicture } from './Loader.styled';
 
-export class Loader extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      loading: true,
-    };
-  }
-
-  render() {
-    return (
-      <div className="sweet-loading">
-        <PuffLoader
-          size={150}
-          color={"#4d27d7"}
-          loading={this.state.loading}
-          speedMultiplier={1.5}
-          aria-label="Loading Spinner"
-          data-testid="loader"
-        />
-      </div>
-    );
-  }
-}
-
+export const Loader = () => {
+  return (
+    <LoaderPicture>
+      <Watch
+        height="80"
+        width="80"
+        radius="48"
+        color="blue"
+        ariaLabel="watch-loading"
+        wrapperStyle={{}}
+        wrapperClassName=""
+        visible={true}
+      />
+    </LoaderPicture>
+  );
+};

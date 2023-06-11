@@ -1,16 +1,40 @@
-import css from './Modal.module.css';
-import propTypes from 'prop-types';
+import PropTypes from 'prop-types';
+import { useEffect } from 'react';
+import { Overlay, ModalContent } from './Modal.styled';
 
-export const Modal = ({ src, alt, handleClose }) => (
-  <div className={css.Overlay} onClick={handleClose}>
-    <div className={css.Modal}>
-      <img src={src} alt={alt} />
-    </div>
-  </div>
-);
+
+export const Modal = ({ largeImageURL, alt, onCloseModal }) => {
+  useEffect(() => {
+    const handleKeydown = e => {
+      if (e.code === 'Escape') {
+        onCloseModal();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => {
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, [onCloseModal]);
+
+  const handleBackdropClick = ({ target, currentTarget }) => {
+    if (currentTarget === target) {
+      onCloseModal();
+    }
+  };
+
+  return (
+    <Overlay onClick={handleBackdropClick}>
+      <ModalContent>
+        <img src={largeImageURL} alt={alt} />
+      </ModalContent>
+    </Overlay>
+  );
+};
+
 
 Modal.propTypes = {
-  src: propTypes.string.isRequired,
-  alt: propTypes.string.isRequired,
-  handleClose: propTypes.func.isRequired,
+  largeImageURL: PropTypes.string.isRequired,
+  alt: PropTypes.string,
+  onCloseModal: PropTypes.func.isRequired,
 };

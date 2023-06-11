@@ -1,98 +1,104 @@
-import React, { useState, useEffect } from 'react';
-import { Searchbar } from './Searchbar/Searchbar';
-import { fetchImages } from './api/fetchImages';
-import { ImageGallery } from './ImageGallery/ImageGallery';
-import { Button } from './Button/Button';
+import { useState, useEffect } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Loader } from './Loader/Loader';
-import { Modal } from './Modal/Modal';
-import cssApp from './App.module.css'
-import cssLoader from './Loader/Loader.module.css';
+import { Button } from './Button/Button';
+import { Searchbar } from './Searchbar/Searchbar';
+import { ImageGallery } from './ImageGallery/ImageGallery';
+import { Api } from './Utils/Api';
+import { AppContainer } from './App.styled';
+
+
+const apiService = new Api();
 
 export const App = () => {
-  const [images, setImages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentSearch, setCurrentSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalImg, setModalImg] = useState('');
-  const [modalAlt, setModalAlt] = useState('');
-  
-  const handleSubmit = async evt => {
-    evt.preventDefault();
-    const inputForSearch = evt.target.elements.inputForSearch;
-    if (inputForSearch.value.trim() === '') return;
-    
-    setIsLoading(true);
-    const response = await fetchImages(inputForSearch.value, 1);  
-    setImages(response);
-    setCurrentSearch(inputForSearch.value);
-    setPage(1);
-    setIsLoading(false);
-    evt.target.elements.inputForSearch.value = "";
-  };
+  const [searchQuery, setSearchQuery] = useState('');
+  const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryPage, setGalleryPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
 
-  const handleClickMore = async () => {
-    setIsLoading(true);
-    const response = await fetchImages(currentSearch, page + 1);
-    setImages([...images, ...response]);
-    setPage(page + 1);    
-    setIsLoading(false);
-  };
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
-  const handleImageClick = evt => {
-    setIsModalOpen(true);
-    setModalImg(evt.target.name);
-    setModalAlt(evt.target.alt);
-  };
+   useEffect(() => {
+    if (!searchQuery) return;
 
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setModalImg('');
-    setModalAlt('');
-  };
+  const fetchGalleryItems = (query, page) => {
+      setLoading(true);
 
-  useEffect(() => {
-    const handleKeyDown = evt => {
-      if (evt.code === 'Escape') {
-        handleModalClose();
-      }
+      apiService.query = query;
+      apiService.page = page;
+
+      apiService
+        .fetchPost()
+        .then(data => {
+          const newData = data.hits.map(
+            ({ id, tags, webformatURL, largeImageURL }) => ({
+              id,
+              tags,
+              webformatURL,
+              largeImageURL,
+            })
+          );
+
+          setGalleryItems(prevGalleryItems => [
+            ...prevGalleryItems,
+            ...newData,
+          ]);
+          setTotalHits(data.totalHits);
+
+          if (!data.totalHits) {
+            setError(true);
+
+            return toast.warn(
+              'Sorry, there are no images matching your search query. Please try again.'
+            );
+          }
+
+          if (page === 1) {
+            toast.success(`Hooray! We found ${data.totalHits} images.`);
+          }
+        })
+        .catch(error => {
+          toast.error(error.message);
+          setError(true);
+          setGalleryItems([]);
+          setTotalHits(0);
+          setGalleryPage(1);
+        })
+        .finally(() => setLoading(false));
     };
-    window.addEventListener('keydown', handleKeyDown);
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    fetchGalleryItems(searchQuery, galleryPage);
+  }, [searchQuery, galleryPage]);
 
-  useEffect(() => {
-    return () => localStorage.removeItem('totalHits');
-  }, []);
+  const handleFormSubmit = searchQuery => {
+    setSearchQuery('');
+    setGalleryItems([]);
+    setTotalHits(0);
+    setGalleryPage(1);
+    setError(false);
 
-  return (
-    <div className={cssApp.App}>
-      {isLoading ? (
-        <div className={cssLoader.loader}>
-          <Loader />
-        </div>
-      ) : (
-        <React.Fragment>
-          <Searchbar onSubmit={handleSubmit} />
-          <ImageGallery
-            onImageClick={handleImageClick}
-            images={images}
-          />
-          {images.length > 0 &&
-              Math.ceil(localStorage.getItem('totalHits') / 12) > page ? (
-            <Button onClick={handleClickMore} />
-          ) : null} 
-            {/* <p>Сторінка {this.state.page} з {Math.ceil(localStorage.getItem('totalHits') / 12)} </p> */}
-        </React.Fragment>
-      )}
-      {isModalOpen ? (
-        <Modal
-          src={modalImg}
-          alt={modalAlt}
-          handleClose={handleModalClose}
-        />
-      ) : null}
-    </div>
-  );
-}
+    setSearchQuery(searchQuery);
+  };
+
+  const onLoadMore = () => {
+    setGalleryPage(prevGalleryPage => prevGalleryPage + 1);
+  };
+
+  
+    return (
+      <AppContainer>
+        <Searchbar onSubmit={handleFormSubmit} />
+
+        {error && <h2>Please, enter search word!</h2>}
+        {!error && <ImageGallery galleryItems={galleryItems} />}
+        {loading && <Loader />}
+        {0 < galleryItems.length && galleryItems.length < totalHits && (
+        <Button onClick={onLoadMore} />
+        )}
+
+        <ToastContainer autoClose={3000} theme="dark" />
+      </AppContainer>
+    );
+  }
